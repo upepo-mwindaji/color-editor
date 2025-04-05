@@ -377,6 +377,7 @@ export function ImageColorEditor() {
     if (index < -1 || index >= editHistory.length) return
 
     setCurrentHistoryIndex(index)
+    setHistoryPanelOpen(false)
 
     if (index === -1) {
       // Return to original image
@@ -446,259 +447,261 @@ export function ImageColorEditor() {
   }, [currentImageUrl])
 
   return (
-    <div className="grid gap-4 md:grid-cols-[1fr_auto]">
-      <div className="grid gap-8">
-        <Card className="overflow-hidden">
-          <CardContent className="p-6">
-            <div className="flex flex-col gap-4">
-              <div className="flex justify-between items-center">
-                <h2 className="text-xl font-semibold">Image Editor</h2>
-                <div className="flex gap-2">
-                  <Button onClick={handleUploadClick} variant="outline" size="sm">
-                    <Upload className="w-4 h-4 mr-2" />
-                    Upload Image
-                  </Button>
-                  <Button
-                    onClick={() => setHistoryPanelOpen(!historyPanelOpen)}
-                    variant="outline"
-                    size="sm"
-                    className="md:hidden"
-                  >
-                    <History className="w-4 h-4 mr-2" />
-                    History
-                  </Button>
+    <div className="w-full px-2 md:px-4">
+      <div className="grid gap-4 md:grid-cols-[1fr_auto]">
+        <div className="grid gap-8">
+          <Card className="overflow-hidden">
+            <CardContent className="p-4 md:p-6">
+              <div className="flex flex-col gap-4">
+                <div className="flex justify-between items-center flex-wrap gap-2">
+                  <h2 className="text-xl font-semibold">Image Editor</h2>
+                  <div className="flex gap-2">
+                    <Button onClick={handleUploadClick} variant="outline" size="sm">
+                      <Upload className="w-4 h-4 mr-2" />
+                      Upload Image
+                    </Button>
+                    <Button
+                      onClick={() => setHistoryPanelOpen(!historyPanelOpen)}
+                      variant="outline"
+                      size="sm"
+                      className="md:hidden"
+                    >
+                      <History className="w-4 h-4 mr-2" />
+                      History
+                    </Button>
+                  </div>
+                  <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
                 </div>
-                <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
-              </div>
 
-              <div className="relative border rounded-md overflow-hidden bg-muted/30 min-h-[300px] flex items-center justify-center">
-                {currentImageUrl ? (
-                  <canvas
-                    ref={canvasRef}
-                    onClick={handleCanvasClick}
-                    className={`max-w-full max-h-[400px] object-contain ${isPickingColor ? "cursor-crosshair" : "cursor-default"}`}
-                  />
-                ) : (
-                  <div className="text-center p-8 text-muted-foreground">
-                    <Upload className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                    <p>Upload an image to get started</p>
+                <div className="relative border rounded-md overflow-hidden bg-muted/30 min-h-[300px] flex items-center justify-center">
+                  {currentImageUrl ? (
+                    <canvas
+                      ref={canvasRef}
+                      onClick={handleCanvasClick}
+                      className={`max-w-full max-h-[400px] object-contain ${isPickingColor ? "cursor-crosshair" : "cursor-default"}`}
+                    />
+                  ) : (
+                    <div className="text-center p-8 text-muted-foreground">
+                      <Upload className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                      <p>Upload an image to get started</p>
+                    </div>
+                  )}
+                </div>
+
+                {currentImageUrl && (
+                  <div className="grid gap-4">
+                    <div className="flex items-center gap-2">
+                      <Button
+                        onClick={() => setIsPickingColor(true)}
+                        variant={isPickingColor ? "default" : "outline"}
+                        disabled={!currentImageUrl}
+                        className="flex-1"
+                      >
+                        <Pipette className="w-4 h-4 mr-2" />
+                        {isPickingColor ? "Click on image to select color" : "Select Color"}
+                      </Button>
+
+                      <div
+                        className="w-10 h-10 rounded-md border"
+                        style={{ backgroundColor: selectedColor || "#ffffff" }}
+                      />
+                    </div>
+
+                    <div className="grid gap-2">
+                      <Label htmlFor="replacement-color">Replacement Color</Label>
+                      <div className="flex gap-2">
+                        <input
+                          id="replacement-color"
+                          type="color"
+                          value={replacementColor}
+                          onChange={(e) => setReplacementColor(e.target.value)}
+                          className="w-10 h-10 rounded-md border p-0"
+                        />
+                        <input
+                          type="text"
+                          value={replacementColor}
+                          onChange={(e) => setReplacementColor(e.target.value)}
+                          className="flex-1 px-3 py-2 border rounded-md"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid gap-2">
+                      <div className="flex justify-between">
+                        <Label htmlFor="tolerance">Color Tolerance</Label>
+                        <span className="text-sm text-muted-foreground">{tolerance[0]}</span>
+                      </div>
+                      <Slider id="tolerance" min={0} max={255} step={1} value={tolerance} onValueChange={setTolerance} />
+                    </div>
+
+                    <div className="flex flex-wrap gap-2">
+                      <Button onClick={processImage} disabled={!selectedColor || isProcessing} className="flex-1 min-w-[120px]">
+                        {isProcessing ? (
+                          <>
+                            <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                            Processing...
+                          </>
+                        ) : (
+                          "Replace Color"
+                        )}
+                      </Button>
+
+                      <Button onClick={handleUndo} disabled={currentHistoryIndex < 0} variant="outline" className="flex-grow-0">
+                        <Undo className="w-4 h-4 mr-2" />
+                        Undo
+                      </Button>
+
+                      <Button onClick={downloadImage} disabled={!currentImageUrl} variant="outline" className="flex-grow-0">
+                        <Download className="w-4 h-4 mr-2" />
+                        Download
+                      </Button>
+                    </div>
                   </div>
                 )}
               </div>
+            </CardContent>
+          </Card>
+        </div>
 
-              {currentImageUrl && (
-                <div className="grid gap-4">
-                  <div className="flex items-center gap-2">
-                    <Button
-                      onClick={() => setIsPickingColor(true)}
-                      variant={isPickingColor ? "default" : "outline"}
-                      disabled={!currentImageUrl}
-                      className="flex-1"
-                    >
-                      <Pipette className="w-4 h-4 mr-2" />
-                      {isPickingColor ? "Click on image to select color" : "Select Color"}
-                    </Button>
+        {/* History Panel - Desktop (hidden on mobile until toggled) */}
+        <Card className={`overflow-hidden h-fit md:block ${historyPanelOpen ? "fixed inset-0 z-50 m-4 md:relative md:inset-auto md:m-0" : "hidden"}`}>
+          <CardContent className="p-4 md:p-6">
+            <div className="flex flex-col gap-4 w-full md:w-[300px]">
+              <div className="flex justify-between items-center">
+                <h2 className="text-xl font-semibold">Edit History</h2>
+                <Button onClick={() => setHistoryPanelOpen(false)} variant="ghost" size="icon" className="md:hidden">
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
 
+              {editHistory.length > 0 ? (
+                <ScrollArea className="h-[60vh] md:h-[500px] pr-4">
+                  <div className="flex flex-col gap-4">
                     <div
-                      className="w-10 h-10 rounded-md border"
-                      style={{ backgroundColor: selectedColor || "#ffffff" }}
-                    />
-                  </div>
-
-                  <div className="grid gap-2">
-                    <Label htmlFor="replacement-color">Replacement Color</Label>
-                    <div className="flex gap-2">
-                      <input
-                        id="replacement-color"
-                        type="color"
-                        value={replacementColor}
-                        onChange={(e) => setReplacementColor(e.target.value)}
-                        className="w-10 h-10 rounded-md border p-0"
-                      />
-                      <input
-                        type="text"
-                        value={replacementColor}
-                        onChange={(e) => setReplacementColor(e.target.value)}
-                        className="flex-1 px-3 py-2 border rounded-md"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid gap-2">
-                    <div className="flex justify-between">
-                      <Label htmlFor="tolerance">Color Tolerance</Label>
-                      <span className="text-sm text-muted-foreground">{tolerance[0]}</span>
-                    </div>
-                    <Slider id="tolerance" min={0} max={255} step={1} value={tolerance} onValueChange={setTolerance} />
-                  </div>
-
-                  <div className="flex gap-2">
-                    <Button onClick={processImage} disabled={!selectedColor || isProcessing} className="flex-1">
-                      {isProcessing ? (
-                        <>
-                          <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                          Processing...
-                        </>
-                      ) : (
-                        "Replace Color"
+                      className={`p-3 border rounded-md cursor-pointer transition-colors ${
+                        currentHistoryIndex === -1 ? "bg-muted" : "hover:bg-muted/50"
+                      }`}
+                      onClick={() => navigateToHistoryPoint(-1)}
+                    >
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="font-medium">Original Image</span>
+                      </div>
+                      {originalImage && (
+                        <div className="relative aspect-video bg-black/5 rounded overflow-hidden">
+                          <img
+                            src={originalImage.src || "/placeholder.svg"}
+                            alt="Original"
+                            className="w-full h-full object-contain"
+                          />
+                        </div>
                       )}
-                    </Button>
+                    </div>
 
-                    <Button onClick={handleUndo} disabled={currentHistoryIndex < 0} variant="outline">
-                      <Undo className="w-4 h-4 mr-2" />
-                      Undo
-                    </Button>
+                    <Separator />
 
-                    <Button onClick={downloadImage} disabled={!currentImageUrl} variant="outline">
-                      <Download className="w-4 h-4 mr-2" />
-                      Download
-                    </Button>
+                    {editHistory.map((edit, index) => (
+                      <div
+                        key={edit.id}
+                        className={`p-3 border rounded-md cursor-pointer transition-colors ${
+                          currentHistoryIndex === index ? "bg-muted" : "hover:bg-muted/50"
+                        }`}
+                        onClick={() => navigateToHistoryPoint(index)}
+                      >
+                        <div className="flex justify-between items-center mb-2">
+                          <Badge variant="outline">Edit {index + 1}</Badge>
+                          <span className="text-xs text-muted-foreground">{formatTime(edit.timestamp)}</span>
+                        </div>
+
+                        <div className="relative aspect-video bg-black/5 rounded overflow-hidden mb-3">
+                          <img
+                            src={edit.imageUrl || "/placeholder.svg"}
+                            alt={`Edit ${index + 1}`}
+                            className="w-full h-full object-contain"
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2 text-sm">
+                          <div>
+                            <Label className="text-xs">From</Label>
+                            <div className="flex items-center gap-2 mt-1">
+                              <div
+                                className="w-4 h-4 rounded-sm border"
+                                style={{ backgroundColor: edit.originalColor }}
+                              />
+                              <span className="text-xs">{edit.originalColor}</span>
+                            </div>
+                          </div>
+
+                          <div>
+                            <Label className="text-xs">To</Label>
+                            <div className="flex items-center gap-2 mt-1">
+                              <div
+                                className="w-4 h-4 rounded-sm border"
+                                style={{ backgroundColor: edit.replacementColor }}
+                              />
+                              <span className="text-xs">{edit.replacementColor}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="mt-2">
+                          <Label className="text-xs">Tolerance: {edit.tolerance}</Label>
+                        </div>
+                      </div>
+                    ))}
                   </div>
+                </ScrollArea>
+              ) : (
+                <div className="text-center p-8 text-muted-foreground">
+                  <History className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                  <p>No edits yet</p>
+                  <p className="text-sm mt-2">Replace colors to build your edit history</p>
+                </div>
+              )}
+
+              {editHistory.length > 0 && (
+                <div className="flex justify-between">
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          disabled={currentHistoryIndex <= -1}
+                          onClick={() => navigateToHistoryPoint(currentHistoryIndex - 1)}
+                        >
+                          <ChevronLeft className="w-4 h-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Previous edit</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+
+                  <span className="text-sm py-2">
+                    {currentHistoryIndex + 1} of {editHistory.length}
+                  </span>
+
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          disabled={currentHistoryIndex >= editHistory.length - 1}
+                          onClick={() => navigateToHistoryPoint(currentHistoryIndex + 1)}
+                        >
+                          <ChevronRight className="w-4 h-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Next edit</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </div>
               )}
             </div>
           </CardContent>
         </Card>
       </div>
-
-      {/* History Panel - Desktop */}
-      <Card className={`overflow-hidden h-fit md:block ${historyPanelOpen ? "block" : "hidden"}`}>
-        <CardContent className="p-6">
-          <div className="flex flex-col gap-4 w-[300px]">
-            <div className="flex justify-between items-center">
-              <h2 className="text-xl font-semibold">Edit History</h2>
-              <Button onClick={() => setHistoryPanelOpen(false)} variant="ghost" size="icon" className="md:hidden">
-                <X className="w-4 h-4" />
-              </Button>
-            </div>
-
-            {editHistory.length > 0 ? (
-              <ScrollArea className="h-[500px] pr-4">
-                <div className="flex flex-col gap-4">
-                  <div
-                    className={`p-3 border rounded-md cursor-pointer transition-colors ${
-                      currentHistoryIndex === -1 ? "bg-muted" : "hover:bg-muted/50"
-                    }`}
-                    onClick={() => navigateToHistoryPoint(-1)}
-                  >
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="font-medium">Original Image</span>
-                    </div>
-                    {originalImage && (
-                      <div className="relative aspect-video bg-black/5 rounded overflow-hidden">
-                        <img
-                          src={originalImage.src || "/placeholder.svg"}
-                          alt="Original"
-                          className="w-full h-full object-contain"
-                        />
-                      </div>
-                    )}
-                  </div>
-
-                  <Separator />
-
-                  {editHistory.map((edit, index) => (
-                    <div
-                      key={edit.id}
-                      className={`p-3 border rounded-md cursor-pointer transition-colors ${
-                        currentHistoryIndex === index ? "bg-muted" : "hover:bg-muted/50"
-                      }`}
-                      onClick={() => navigateToHistoryPoint(index)}
-                    >
-                      <div className="flex justify-between items-center mb-2">
-                        <Badge variant="outline">Edit {index + 1}</Badge>
-                        <span className="text-xs text-muted-foreground">{formatTime(edit.timestamp)}</span>
-                      </div>
-
-                      <div className="relative aspect-video bg-black/5 rounded overflow-hidden mb-3">
-                        <img
-                          src={edit.imageUrl || "/placeholder.svg"}
-                          alt={`Edit ${index + 1}`}
-                          className="w-full h-full object-contain"
-                        />
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-2 text-sm">
-                        <div>
-                          <Label className="text-xs">From</Label>
-                          <div className="flex items-center gap-2 mt-1">
-                            <div
-                              className="w-4 h-4 rounded-sm border"
-                              style={{ backgroundColor: edit.originalColor }}
-                            />
-                            <span className="text-xs">{edit.originalColor}</span>
-                          </div>
-                        </div>
-
-                        <div>
-                          <Label className="text-xs">To</Label>
-                          <div className="flex items-center gap-2 mt-1">
-                            <div
-                              className="w-4 h-4 rounded-sm border"
-                              style={{ backgroundColor: edit.replacementColor }}
-                            />
-                            <span className="text-xs">{edit.replacementColor}</span>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="mt-2">
-                        <Label className="text-xs">Tolerance: {edit.tolerance}</Label>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </ScrollArea>
-            ) : (
-              <div className="text-center p-8 text-muted-foreground">
-                <History className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                <p>No edits yet</p>
-                <p className="text-sm mt-2">Replace colors to build your edit history</p>
-              </div>
-            )}
-
-            {editHistory.length > 0 && (
-              <div className="flex justify-between">
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        disabled={currentHistoryIndex <= -1}
-                        onClick={() => navigateToHistoryPoint(currentHistoryIndex - 1)}
-                      >
-                        <ChevronLeft className="w-4 h-4" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>Previous edit</TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-
-                <span className="text-sm py-2">
-                  {currentHistoryIndex + 1} of {editHistory.length}
-                </span>
-
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        disabled={currentHistoryIndex >= editHistory.length - 1}
-                        onClick={() => navigateToHistoryPoint(currentHistoryIndex + 1)}
-                      >
-                        <ChevronRight className="w-4 h-4" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>Next edit</TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
     </div>
   )
 }
