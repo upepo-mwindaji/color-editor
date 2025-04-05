@@ -132,9 +132,12 @@ export function ImageColorEditor() {
   const [editHistory, setEditHistory] = useState<EditOperation[]>([])
   const [currentHistoryIndex, setCurrentHistoryIndex] = useState(-1)
   const [historyPanelOpen, setHistoryPanelOpen] = useState(false)
+  const [cursorPosition, setCursorPosition] = useState<{ x: number; y: number } | null>(null)
+  const [magnifierVisible, setMagnifierVisible] = useState(false)
 
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const magnifierRef = useRef<HTMLDivElement>(null)
 
   // Handle file upload
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -186,6 +189,94 @@ export function ImageColorEditor() {
 
     setSelectedColor(color)
     setIsPickingColor(false)
+    setMagnifierVisible(false)
+  }
+
+  // Handle mouse move for magnifying glass
+  const handleCanvasMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!isPickingColor || !canvasRef.current) return
+
+    const canvas = canvasRef.current
+    const rect = canvas.getBoundingClientRect()
+    
+    // Get cursor position relative to canvas
+    const x = e.clientX - rect.left
+    const y = e.clientY - rect.top
+    
+    setCursorPosition({ x, y })
+    setMagnifierVisible(true)
+  }
+
+  // Handle mouse leave for magnifying glass
+  const handleCanvasMouseLeave = () => {
+    if (isPickingColor) {
+      setMagnifierVisible(false)
+    }
+  }
+
+  // Render magnifying glass
+  const renderMagnifier = () => {
+    if (!magnifierVisible || !cursorPosition || !canvasRef.current) return null
+
+    const canvas = canvasRef.current
+    const ctx = canvas.getContext("2d")
+    if (!ctx) return null
+
+    const rect = canvas.getBoundingClientRect()
+    const scaleX = canvas.width / rect.width
+    const scaleY = canvas.height / rect.height
+
+    // Get real coordinates on the image
+    const imageX = Math.floor(cursorPosition.x * scaleX)
+    const imageY = Math.floor(cursorPosition.y * scaleY)
+
+    // Get color at cursor position
+    const pixel = ctx.getImageData(imageX, imageY, 1, 1).data
+    const color = `#${pixel[0].toString(16).padStart(2, "0")}${pixel[1].toString(16).padStart(2, "0")}${pixel[2].toString(16).padStart(2, "0")}`
+
+    // Calculate magnifier position
+    const magnifierSize = 120 // Size of the magnifier in pixels
+    const magnifierScale = 4 // Zoom level
+    
+    // Position magnifier above cursor, unless near top edge
+    const yOffset = cursorPosition.y > magnifierSize ? -magnifierSize - 10 : 20
+    
+    // Position magnifier to avoid edges
+    let magX = cursorPosition.x - magnifierSize / 2
+    if (magX < 0) magX = 0
+    if (magX + magnifierSize > rect.width) magX = rect.width - magnifierSize
+
+    return (
+      <div 
+        ref={magnifierRef}
+        className="absolute rounded-full shadow-lg border border-gray-300 overflow-hidden pointer-events-none z-10"
+        style={{
+          width: magnifierSize + 'px',
+          height: magnifierSize + 'px',
+          left: magX + 'px',
+          top: cursorPosition.y + yOffset + 'px',
+        }}
+      >
+        <div 
+          className="w-full h-full relative"
+          style={{
+            backgroundImage: `url(${currentImageUrl})`,
+            backgroundRepeat: 'no-repeat',
+            backgroundSize: `${canvas.width * magnifierScale}px ${canvas.height * magnifierScale}px`,
+            backgroundPosition: `-${imageX * magnifierScale - magnifierSize / 2}px -${imageY * magnifierScale - magnifierSize / 2}px`,
+          }}
+        >
+          <div className="absolute inset-0 flex flex-col items-center justify-end pb-1">
+            <div className="bg-black/70 text-white px-2 py-0.5 rounded text-xs">
+              {color}
+            </div>
+          </div>
+          {/* Crosshair */}
+          <div className="absolute left-1/2 top-0 bottom-0 w-px bg-white/70"></div>
+          <div className="absolute top-1/2 left-0 right-0 h-px bg-white/70"></div>
+        </div>
+      </div>
+    )
   }
 
   // Process the image to replace colors
@@ -475,11 +566,16 @@ export function ImageColorEditor() {
 
                 <div className="relative border rounded-md overflow-hidden bg-muted/30 min-h-[300px] flex items-center justify-center">
                   {currentImageUrl ? (
-                    <canvas
-                      ref={canvasRef}
-                      onClick={handleCanvasClick}
-                      className={`max-w-full max-h-[400px] object-contain ${isPickingColor ? "cursor-crosshair" : "cursor-default"}`}
-                    />
+                    <>
+                      <canvas
+                        ref={canvasRef}
+                        onClick={handleCanvasClick}
+                        onMouseMove={handleCanvasMouseMove}
+                        onMouseLeave={handleCanvasMouseLeave}
+                        className={`max-w-full max-h-[400px] object-contain ${isPickingColor ? "cursor-crosshair" : "cursor-default"}`}
+                      />
+                      {isPickingColor && renderMagnifier()}
+                    </>
                   ) : (
                     <div className="text-center p-8 text-muted-foreground">
                       <Upload className="w-12 h-12 mx-auto mb-2 opacity-50" />
